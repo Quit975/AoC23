@@ -34,7 +34,7 @@ end
 
 function GetMapping1(input_number, map_to_use)
     for _, offset in pairs(map_to_use) do
-        local end_source = offset.source + offset.length;
+        local end_source = offset.source + (offset.length - 1);
         if input_number >= offset.source and input_number <= end_source then
             local actual_offset = input_number - offset.source;
             return offset.destination + actual_offset;
@@ -106,6 +106,8 @@ function GetSeeds2(input_line)
 end
 
 function SolveSecondPart()
+    local start_time = os.clock();
+
     local solution = 0;
 
     local seed_to_soil_map = {};
@@ -152,32 +154,31 @@ function SolveSecondPart()
 
     function FindSmallestPosForSeedRange(seed_range)
         local first_seed = seed_range.start;
-        local last_seed = seed_range.start + seed_range.length - 1;
-        local dt = math.floor(seed_range.length / 10000);
+        local seed_offset = seed_range.length - 1;
+        local last_seed = seed_range.start + seed_offset;
 
-        local lowest_pos = 0;
-        local lowest_idx = 0;
-        local prev_idx = -1;
-        local next_idx = 0;
+        local dt = math.floor(seed_offset / 10000);
+        local lowest_pos = -99;
 
-        for idx = first_seed, last_seed, dt do
-            local idx_to_check = (idx <= last_seed) and idx or last_seed;
-            local pos = GetPositionForSeed(idx_to_check);
-
-            if lowest_pos == 0 or lowest_pos > pos then 
-                lowest_pos = pos;
-                lowest_idx = idx_to_check;
-                prev_idx = (prev_idx > -1) and (idx - dt) or idx;
-                next_idx = ((idx + dt) <= last_seed) and (idx + dt) or last_seed;;
+        local prev_idx;
+        local next_idx;
+        for seed_idx = first_seed, last_seed, dt do
+            local clamped_idx = seed_idx > last_seed and last_seed or seed_idx;
+            local seed_pos = GetPositionForSeed(clamped_idx);
+            if lowest_pos == -99 or lowest_pos > seed_pos then
+                lowest_pos = seed_pos;
+                prev_idx = (seed_idx - dt) >= first_seed and (seed_idx - dt) or first_seed;
+                next_idx = (seed_idx + dt) <= last_seed and (seed_idx + dt) or last_seed;
             end;
         end
 
-        for idx = prev_idx, next_idx do
-            local pos = GetPositionForSeed(idx);
-            if lowest_pos > pos then lowest_pos = pos end;
+        local result = -99;
+        for seed_idx = prev_idx, next_idx do
+            local seed_pos = GetPositionForSeed(seed_idx);
+            if result == -99 or result > seed_pos then result = seed_pos end;
         end
 
-        return lowest_pos;
+        return result;
     end
 
     for _, seed in pairs(seeds) do
@@ -185,99 +186,12 @@ function SolveSecondPart()
         if solution == 0 or solution > pos then solution = pos end;
     end
 
+    local end_time = os.clock();
+    local final_time = end_time - start_time;
+
     print("Second part solution!");
     print(string.format("The solution is %d", solution));
-
-    --[[alt solution
-    local source_comp = function(l, r)
-        return l.source <= r.source;
-    end
-
-    local dest_comp = function(l, r)
-        return l.destination < r.destination;
-    end
-
-    -- find lowest position
-    table.sort(hum_to_loc_map, dest_comp);
-    local lowest_pos = hum_to_loc_map[1].destination;
-    local lowest_pos_input = hum_to_loc_map[1].source;
-
-    -- find input to hum that gives this pos
-    table.sort(temp_to_hum_map, dest_comp);
-    local hum_input = 0;
-    for _, hum in pairs(temp_to_hum_map) do
-        if lowest_pos_input >= hum.destination and lowest_pos_input <= (hum.destination + hum.length) then
-            local offset = lowest_pos_input - hum.destination;
-            hum_input = hum.source + offset;
-            break;
-        end
-    end
-
-    -- find input to temp that gives this hum
-    table.sort(light_to_temp_map, dest_comp);
-    local temp_input = 0;
-    for _, temp in pairs(light_to_temp_map) do
-        if hum_input >= temp.destination and hum_input <= (temp.destination + temp.length) then
-            local offset = hum_input - temp.destination;
-            temp_input = temp.source + offset;
-            break;
-        end
-    end
-
-    -- find input to light that gives this temp
-    table.sort(water_to_light_map, dest_comp);
-    local light_input = 0;
-    for _, light in pairs(water_to_light_map) do
-        if temp_input >= light.destination and temp_input <= (light.destination + light.length) then
-            local offset = temp_input - light.destination;
-            light_input = light.source + offset;
-            break;
-        end
-    end
-
-    -- find input to water that gives this light
-    table.sort(fert_to_water_map, dest_comp);
-    local water_input = 0;
-    for _, water in pairs(fert_to_water_map) do
-        if light_input >= water.destination and light_input <= (water.destination + water.length) then
-            local offset = light_input - water.destination;
-            water_input = water.source + offset;
-            break;
-        end
-    end
-
-    -- find input to fert that gives this water
-    table.sort(soil_to_fert_map, dest_comp);
-    local fert_input = 0;
-    for _, fert in pairs(soil_to_fert_map) do
-        if water_input >= fert.destination and water_input <= (fert.destination + fert.length) then
-            local offset = water_input - fert.destination;
-            fert_input = fert.source + offset;
-            break;
-        end
-    end
-
-    -- find input to seed that gives this fert
-    table.sort(seed_to_soil_map, dest_comp);
-    local soil_input = 0;
-    for _, soil in pairs(seed_to_soil_map) do
-        if fert_input >= soil.destination and fert_input <= (soil.destination + soil.length) then
-            local offset = fert_input - soil.destination;
-            soil_input = soil.source + offset;
-            break;
-        end
-    end
-
-    local my_turbo_seed = 0;
-    for _, seed in pairs(seeds) do
-        if soil_input >= seed.start and soil_input <= (seed.start + seed.length -1) then
-            local offset = soil_input - seed.start;
-        end
-    end
-
-    print(soil_input);
-    print(GetPositionForSeed(soil_input));
-    ]]--
+    print(string.format("The solution took %f seconds", final_time));
 end
 
 SolveFirstPart();
