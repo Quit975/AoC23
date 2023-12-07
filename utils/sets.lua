@@ -3,7 +3,12 @@ Set = {}
 function Set.New (t)
     local set = {}
     local size = 0
-    for _, l in ipairs(t) do set[l] = true; size = size + 1 end
+    for _, l in ipairs(t) do
+        if not set[l] then
+            size = size + 1;
+            set[l] = true;
+        end
+    end
     return set, size
 end
 
@@ -26,4 +31,13 @@ function Set.Intersection (a,b)
         end
     end
     return res, size
+end
+
+function Set.Add(set, element)
+    if not set[element] then
+        set[element] = true;
+        return true;
+    else
+        return false;
+    end
 end
