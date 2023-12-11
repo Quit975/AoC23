@@ -12,6 +12,16 @@ function Set.New (t)
     return set, size
 end
 
+function Set.NewFromSet (set)
+    local res = {}
+    local size = 0
+    for k in pairs(set) do
+        size = size + 1;
+        res[k] = true;
+    end
+    return res, size
+end
+
 function Set.Union (a,b)
     local res = Set.New{}
     local size = 0
@@ -33,6 +43,17 @@ function Set.Intersection (a,b)
     return res, size
 end
 
+function Set.Complement(universal_set, tested_set)
+    local res, size = Set.NewFromSet(universal_set);
+    for k in pairs(tested_set) do
+        if Set.Remove(res, k) then
+            size = size - 1;
+        end
+    end
+
+    return res, size;
+end
+
 function Set.Add(set, element)
     if not set[element] then
         set[element] = true;
@@ -40,4 +61,23 @@ function Set.Add(set, element)
     else
         return false;
     end
+end
+
+function Set.Remove(set, element)
+    if set[element] then
+        set[element] = false;
+        return true;
+    else
+        return false;
+    end
+end
+
+function Set.ToArray(set)
+    local res = {};
+    for k in pairs(set) do
+        if set[k] then
+            table.insert(res, k);
+        end
+    end
+    return res;
 end
